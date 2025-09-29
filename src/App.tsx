@@ -1,15 +1,15 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import QuizForm from './QuizForm';
-import IndexPage from './IndexPage';
-import QuizByIdPage from './QuizByIdPage';
+import Index from '.';
+import QuizCreate from './quizCreate';
+import QuizById from './QuizById';
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<IndexPage />} />
-      <Route path="/create-quiz" element={<QuizForm />} />
-      <Route path="/quiz/:id" element={<QuizByIdPage />} />
+      <Route path="/" element={<Index />} />
+      <Route path="/quiz/create" element={<QuizCreate />} />
+      <Route path="/quiz/:id" element={<QuizById />} />
     </Routes>
   );
 }
