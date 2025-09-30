@@ -1,4 +1,4 @@
-const { db, migrate } = require('./db');
+const { db, migrate } = require('./db.js');
 
 function main() {
   migrate();

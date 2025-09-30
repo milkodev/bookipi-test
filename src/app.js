@@ -3,10 +3,11 @@ const express = require("express");
 const cors = require("cors");
 const { db, migrate } = require("./db");
 
+
 function createApp() {
 	const app = express();
-	const API_TOKEN = process.env.API_TOKEN || "dev-token";
-
+	// Prefer VITE_API_TOKEN if set, else API_TOKEN, else 'dev-token'
+	const API_TOKEN = process.env.VITE_API_TOKEN || process.env.API_TOKEN || "dev-token";
 	migrate();
 
 	app.use(cors());

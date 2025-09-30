@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Index from '.';
-import QuizCreate from './quizCreate';
+import QuizCreate from './QuizCreate';
 import QuizById from './QuizById';
 
 export default function App() {

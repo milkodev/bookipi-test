@@ -1,6 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'dev-token';
+const PORT = import.meta.env.VITE_PORT || '4000';
+const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost';
 
 export type Quiz = {
   id: number;
@@ -12,15 +15,17 @@ export default function IndexPage() {
   const { data: quizzes, isPending, error } = useQuery<Quiz[]>({
     queryKey: ['quizzes'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:4000/quizzes', {
-        headers: { 'Authorization': 'Bearer dev-token' }
+      const res = await fetch(`${BASE_URL}:${PORT}/quizzes`, {
+        headers: {
+          Authorization: `Bearer ${API_TOKEN}`,
+        },
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const allQuizzes = await res.json();
       return allQuizzes.filter((quiz: any) => quiz.isPublished === true);
     }
   });
-
+  console.log(import.meta.env);
   return (
     <div className="min-h-screen w-full bg-gray-900 text-white flex flex-col">
       <header className="bg-black shadow py-6 px-8">

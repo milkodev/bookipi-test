@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+// Use Vite env variable for API token
+const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'dev-token';
+const PORT = import.meta.env.VITE_PORT || '4000';
+const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
@@ -11,13 +15,14 @@ export default function QuizById() {
   const [attemptId, setAttemptId] = useState<number | null>(null);
   const [submitResult, setSubmitResult] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [autoSubmitted, setAutoSubmitted] = useState(false);
   const [antiCheatSummary, setAntiCheatSummary] = useState<{ tabSwitches: number; pastes: number } | null>(null);
 
   const { data: quiz, isPending, error } = useQuery({
     queryKey: ['quiz', id],
     queryFn: async () => {
-      const res = await fetch(`http://localhost:4000/quizzes/${id}`, {
-        headers: { 'Authorization': 'Bearer dev-token' }
+      const res = await fetch(`${BASE_URL}:${PORT}/quizzes/${id}`, {
+        headers: { 'Authorization': `Bearer ${API_TOKEN}` }
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       return res.json();
@@ -30,11 +35,11 @@ export default function QuizById() {
       setTimeLeft(quiz.timeLimitSeconds);
     }
     if (started && attemptId === null && quiz?.id) {
-      fetch('http://localhost:4000/attempts', {
+      fetch(`${BASE_URL}:${PORT}/attempts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer dev-token',
+          'Authorization': `Bearer ${API_TOKEN}`,
         },
         body: JSON.stringify({ quizId: quiz.id }),
       })
@@ -51,26 +56,60 @@ export default function QuizById() {
       return;
     }
     if (timeLeft === null || !started) return;
-    if (timeLeft <= 0) return;
+    if (timeLeft <= 0) {
+      // Auto-submit when time runs out
+      if (!submitResult && attemptId && !submitting && quiz?.questions) {
+        setAutoSubmitted(true);
+        setAnswers({}); // Clear answers in UI as well
+        (async () => {
+          setSubmitting(true);
+          try {
+            // Send empty answers for all questions
+            await Promise.all(
+              quiz.questions.map((q: any) =>
+                fetch(`${BASE_URL}:${PORT}/attempts/${attemptId}/answer`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_TOKEN}`,
+                  },
+                  body: JSON.stringify({ questionId: q.id, value: '' }),
+                })
+              )
+            );
+            const res = await fetch(`${BASE_URL}:${PORT}/attempts/${attemptId}/submit`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${API_TOKEN}` },
+            });
+            const data = await res.json();
+            setSubmitResult(data);
+          } finally {
+            setSubmitting(false);
+          }
+        })();
+      }
+      return;
+    }
     const timer = window.setTimeout(() => setTimeLeft(t => (t !== null ? t - 1 : t)), 1000);
     return () => clearTimeout(timer);
-  }, [timeLeft, started, submitResult]);
+  }, [timeLeft, started, submitResult, attemptId, submitting]);
 
-  useEffect(() => {
+useEffect(() => {
     if (!started || attemptId === null) return;
+    if (timeLeft === 0) return; // Prevent answer submission after time is up
     const q = quiz?.questions?.[questionIdx];
     if (!q) return;
-    if (answers[questionIdx] === undefined) return;
+    // Always send the answer, even if it's empty (for 0 score)
     if (typeof attemptId !== 'number' || isNaN(attemptId)) return;
-    fetch(`http://localhost:4000/attempts/${attemptId}/answer`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer dev-token',
-      },
-      body: JSON.stringify({ questionId: q.id, value: answers[questionIdx] }),
+    fetch(`${BASE_URL}:${PORT}/attempts/${attemptId}/answer`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_TOKEN}`,
+        },
+        body: JSON.stringify({ questionId: q.id, value: answers[questionIdx] }),
     });
-  }, [answers[questionIdx]]);
+}, [answers[questionIdx], timeLeft]);
 
   useEffect(() => {
     if (submitResult) {
@@ -90,11 +129,11 @@ export default function QuizById() {
         const tabSwitches = (prev?.tabSwitches || 0) + 1;
         return { ...prev, tabSwitches, pastes: prev?.pastes || 0 };
       });
-      fetch(`http://localhost:4000/attempts/${attemptId}/events`, {
+      fetch(`${BASE_URL}:${PORT}/attempts/${attemptId}/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer dev-token',
+          'Authorization': `Bearer ${API_TOKEN}`,
         },
         body: JSON.stringify({ event: 'blur' }),
       });
@@ -148,9 +187,9 @@ export default function QuizById() {
       <h1 className="text-2xl font-bold mb-4">{quiz.title || 'Untitled Quiz'}</h1>
       <p className="mb-6 text-gray-400">{quiz.description || ''}</p>
       {submitResult && (
-        <div className="mb-4 p-4 bg-gray-800 rounded text-green-400">
-          <div className="text-xl font-bold mb-2">Quiz submitted!</div>
-          <div className="mb-2">Score: <span className="font-mono">{submitResult.score} / {questions.length}</span></div>
+        <div className={`mb-4 p-4 bg-gray-800 rounded ${autoSubmitted ? 'text-red-400' : 'text-green-400'}`}>
+          <div className="text-xl font-bold mb-2">{autoSubmitted ? 'Time is up!' : 'Quiz submitted!'}</div>
+          <div className="mb-2">Score: <span className="font-mono">{autoSubmitted ? 0 : submitResult.score} / {questions.length}</span></div>
           <div className="mb-2 font-semibold text-white">Per-question results:</div>
           <ol className="mb-2 list-decimal list-inside">
             {questions.map((q: any) => {
@@ -210,7 +249,7 @@ export default function QuizById() {
                     className="form-radio text-blue-600 disabled:cursor-not-allowed"
                     checked={answers[questionIdx] === idx}
                     onChange={() => setAnswers(a => ({ ...a, [questionIdx]: idx }))}
-                    disabled={!started}
+                    disabled={!started || timeLeft === 0}
                   />
                   <span>{choice}</span>
                 </label>
@@ -226,7 +265,7 @@ export default function QuizById() {
                 name={`q${questionIdx}`}
                 value={answers[questionIdx] || ''}
                 onChange={e => setAnswers(a => ({ ...a, [questionIdx]: e.target.value }))}
-                disabled={!started}
+                disabled={!started || timeLeft === 0}
               />
               <div className="text-xs text-gray-400 mt-1">Short answer (case-insensitive)</div>
             </div>
@@ -236,7 +275,7 @@ export default function QuizById() {
       <div className="flex gap-2">
         {!submitResult && 
           <button
-            className="px-4 py-2 bg-gray-700 rounded text-black disabled:opacity-50"
+            className="px-4 py-2 !bg-white rounded text-black disabled:opacity-50"
             onClick={() => setQuestionIdx(i => i - 1)}
             disabled={questionIdx === 0}
           >
@@ -269,9 +308,9 @@ export default function QuizById() {
               if (!attemptId) return;
               setSubmitting(true);
               try {
-                const res = await fetch(`http://localhost:4000/attempts/${attemptId}/submit`, {
+                const res = await fetch(`${BASE_URL}:${PORT}/attempts/${attemptId}/submit`, {
                   method: 'POST',
-                  headers: { 'Authorization': 'Bearer dev-token' },
+                  headers: { 'Authorization': `Bearer ${API_TOKEN}` },
                 });
                 const data = await res.json();
                 setSubmitResult(data);

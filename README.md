@@ -8,7 +8,7 @@ This is a **drop-in backend** you can give to candidates for the Quiz Maker take
 # 1) Install deps
 npm i
 
-# 2) Copy env and customize if needed
+# 2) Copy env and customize if needed(optional step)
 cp .env.example .env
 
 # 3) Initialize DB with schema + sample data
@@ -21,7 +21,7 @@ npm run dev    # or: npm start
 By default the API runs on **http://localhost:4000** and requires `Authorization: Bearer ${API_TOKEN}` on every request.
 
 - Default token (from `.env.example`): `dev-token`
-- Set your own in `.env` → `API_TOKEN=your-secret`
+- Set your own in `.env` → `VITE_API_TOKEN=your-secret`
 
 ## Endpoints (contract used by the take-home)
 

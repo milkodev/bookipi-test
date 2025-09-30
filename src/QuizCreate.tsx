@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'dev-token';
+const PORT = import.meta.env.VITE_PORT || '4000';
+const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost';
 
 // Add a type for questions that supports codeSnippet
 interface QuizQuestion {
@@ -19,7 +22,7 @@ export default function QuizCreate() {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
 
   // Countdown timer state for quiz creation success
-  const [minSec, setMinSec] = useState<number>(60);
+  const [minSec, setMinSec] = useState<number>(30);
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdQuizId, setCreatedQuizId] = useState<string | null>(null);
 
@@ -118,11 +121,11 @@ export default function QuizCreate() {
     };
     try {
       // Create quiz
-      const res = await fetch('http://localhost:4000/quizzes', {
+      const res = await fetch(`${BASE_URL}:${PORT}/quizzes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer dev-token',
+          'Authorization': `Bearer ${API_TOKEN}`
         },
         body: JSON.stringify({
           title: quizPayload.title,
@@ -136,11 +139,11 @@ export default function QuizCreate() {
       setCreatedQuizId(quiz.id);
       // Add questions
       for (const q of quizPayload.questions) {
-        await fetch(`http://localhost:4000/quizzes/${quiz.id}/questions`, {
+        await fetch(`${BASE_URL}:${PORT}/quizzes/${quiz.id}/questions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer dev-token',
+            'Authorization': `Bearer ${API_TOKEN}`
           },
           body: JSON.stringify(q),
         });
@@ -168,7 +171,7 @@ export default function QuizCreate() {
               <div>
               <span className="font-semibold">Quiz ID:</span> <span className="text-yellow-200">{createdQuizId}</span>
               <button
-                className="ml-2 px-2 py-1 !bg-orange-500 text-white rounded text-xs hover:!bg-red-700"
+                className="ml-2 px-2 py-1 !bg-orange-800 text-white rounded text-xs hover:!bg-yellow-700"
                 onClick={() => {
                 if (createdQuizId) {
                   navigator.clipboard.writeText(createdQuizId);
@@ -179,7 +182,7 @@ export default function QuizCreate() {
                 Copy ID
               </button>
               </div>
-              <Link to={`/quiz/${createdQuizId}`} className="underline text-blue-800">
+              <Link to={`/quiz/${createdQuizId}`} className="underline !text-blue-800 hover:!text-blue-400">
               View your new quiz
               </Link>
             </div>
@@ -218,7 +221,7 @@ export default function QuizCreate() {
             className="border rounded border-white bg-black text-white px-3 py-2 w-full disabled:cursor-not-allowed"
             value={timeLimitSeconds ?? ''}
             onChange={e => setTimeLimitSeconds(e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)))}
-            placeholder={`Minimum 60 seconds`}
+            placeholder={`Minimum ${minSec} seconds`}
             disabled={showSuccess}
           />
         </div>
@@ -267,23 +270,10 @@ export default function QuizCreate() {
                       onChange={e => handleQuestionChange(idx, 'type', e.target.value)}
                       disabled={showSuccess}
                     >
-                      <option value="mcq">Multiple Choice</option>
-                      <option value="short">Short Answer</option>
+                      <option value="mcq">Multiple Choice</option>   
+                      <option value="short">Short Answer</option>                                         
                     </select>
                   </div>
-                  {q.type !== 'mcq' && (
-                    <div className="mb-2">
-                      <label className="block text-white mb-1">Code Snippet (optional)</label>
-                      <textarea
-                        className="border rounded border-white bg-black text-white px-2 py-1 w-full"
-                        value={q.codeSnippet || ''}
-                        onChange={e => handleQuestionChange(idx, 'codeSnippet', e.target.value)}
-                        placeholder="Paste code here (optional)"
-                        rows={2}
-                        disabled={showSuccess}
-                      />
-                    </div>
-                  )}
                   {q.type === 'mcq' && q.choices && (
                     <div className="mb-2">
                       <label className="block text-white mb-1">Choices (must have at least 2 unique choices)</label>
@@ -335,6 +325,19 @@ export default function QuizCreate() {
                       </div>
                     )}
                   </div>
+                  {q.type !== 'mcq' && (
+                    <div className="mb-2">
+                      <label className="block text-white mb-1">Code Snippet (optional)</label>
+                      <textarea
+                        className="border rounded border-white bg-black text-white px-2 py-1 w-full"
+                        value={q.codeSnippet || ''}
+                        onChange={e => handleQuestionChange(idx, 'codeSnippet', e.target.value)}
+                        placeholder="Paste code here (optional)"
+                        rows={2}
+                        disabled={showSuccess}
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </div>
