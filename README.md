@@ -2,6 +2,8 @@
 
 This is a **drop-in backend** you can give to candidates for the Quiz Maker take-home. It exposes the endpoints from the brief and stores data in a local SQLite file (`data.sqlite`).
 
+Use node version 20.19.5 or up to avoid problem in installing dependency
+
 ## Quick start
 
 ```bash
