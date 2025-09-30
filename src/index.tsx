@@ -25,7 +25,7 @@ export default function IndexPage() {
       return allQuizzes.filter((quiz: any) => quiz.isPublished === true);
     }
   });
-  console.log(import.meta.env);
+
   return (
     <div className="min-h-screen w-full bg-gray-900 text-white flex flex-col">
       <header className="bg-black shadow py-6 px-8">
